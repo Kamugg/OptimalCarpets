@@ -41,10 +41,13 @@ def start_drawing_mode(size: int, path: str):
     draw_press, delete_press = False, False
     mode = 'free'
     circle_center = (-1, -1)
+    rect_topleft = (-1, -1)
     selected_block = 1
     drawing = True
     clock = pygame.time.Clock()
     while drawing:
+        mx, my = pygame.mouse.get_pos()
+        mx, my = clip_mouse((mx, my), size)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 drawing = False
@@ -64,6 +67,14 @@ def start_drawing_mode(size: int, path: str):
                         circle_center = (-1, -1)
                 elif mode == 'fill':
                     fill(grid, (mx, my), selected_block)
+                elif mode == 'rect':
+                    if rect_topleft == (-1, -1):
+                        rect_topleft = (mx, my)
+                    else:
+                        rect_coor = draw_rect(rect_topleft, (mx, my))
+                        for x, y in rect_coor:
+                            grid[y][x] = selected_block
+                        rect_topleft = (-1, -1)
             if event.type == pygame.MOUSEBUTTONUP:
                 if mode == 'free':
                     if event.button == 1:
@@ -73,6 +84,8 @@ def start_drawing_mode(size: int, path: str):
                     mode = 'circle' if mode != 'circle' else 'free'
                 if event.key == pygame.K_f:
                     mode = 'fill' if mode != 'fill' else 'free'
+                if event.key == pygame.K_r:
+                    mode = 'rect' if mode != 'rect' else 'free'
                 if event.key == pygame.K_s:
                     with open('pattern.json', 'w') as f:
                         json.dump(grid, f)
@@ -89,8 +102,7 @@ def start_drawing_mode(size: int, path: str):
                     selected_block = 4
         clock.tick(60)
         screen.fill((180, 180, 180))
-        mx, my = pygame.mouse.get_pos()
-        mx, my = clip_mouse((mx, my), size)
+
         if draw_press:
             if mode == 'free':
                 grid[my][mx] = selected_block
@@ -127,6 +139,23 @@ def clip_mouse(coor: tuple[int, int], grid_size: int) -> tuple[int, int]:
     return x, y
 
 
+def draw_rect(topleft: tuple[int, int], btmright: tuple[int, int]) -> list[tuple[int, int]]:
+    if topleft[0] <= btmright[0]:
+        xrange = range(topleft[0], btmright[0] + 1)
+    else:
+        xrange = range(btmright[0], topleft[0] + 1)
+    if topleft[1] <= btmright[1]:
+        yrange = range(topleft[1], btmright[1] + 1)
+    else:
+        yrange = range(btmright[1], topleft[1] + 1)
+    rect_coor = []
+    rect_coor += [(p, topleft[1]) for p in xrange]
+    rect_coor += [(p, btmright[1]) for p in xrange]
+    rect_coor += [(topleft[0], p) for p in yrange]
+    rect_coor += [(btmright[0], p) for p in yrange]
+    return rect_coor
+
+
 def draw_circle(center: tuple[int, int], size: int) -> list[tuple[int, int]]:
     points = []
     if size % 2 == 1:
@@ -160,9 +189,7 @@ def draw_circle(center: tuple[int, int], size: int) -> list[tuple[int, int]]:
     return [(int(p[0]), int(p[1])) for p in points]
 
 
-
 def fill(grid: list, start: tuple[int, int], selected_block: int):
-
     to_fill = {start}
     w, h = len(grid[0]), len(grid)
     while to_fill:
