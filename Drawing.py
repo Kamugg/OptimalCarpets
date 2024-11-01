@@ -1,7 +1,6 @@
 import json
 import math
 import random
-
 import pygame
 import argparse
 
@@ -9,10 +8,13 @@ TILE_OFFSET = 1
 SCALE = 20
 EMPTY = pygame.Surface((SCALE, SCALE))
 EMPTY.fill((0, 0, 0))
-COBBLE = pygame.transform.scale(pygame.image.load("./assets/cobble.jpg"), (SCALE, SCALE))
-WOOL = pygame.transform.scale(pygame.image.load("./assets/wool.jpg"), (SCALE, SCALE))
-BRICK = pygame.transform.scale(pygame.image.load("./assets/bricks.jpg"), (SCALE, SCALE))
-TRAP = pygame.transform.scale(pygame.image.load("./assets/trap.jpg"), (SCALE, SCALE))
+COBBLE = pygame.transform.scale(pygame.image.load("assets/tiles/cobble.jpg"), (SCALE, SCALE))
+WOOL = pygame.transform.scale(pygame.image.load("assets/tiles/wool.jpg"), (SCALE, SCALE))
+BRICK = pygame.transform.scale(pygame.image.load("assets/tiles/bricks.jpg"), (SCALE, SCALE))
+TRAP = pygame.transform.scale(pygame.image.load("assets/tiles/trap.jpg"), (SCALE, SCALE))
+
+# Spider icon is by xmyonli at https://www.deviantart.com/xmyonli/art/Minecraft-Spider-Icon-for-Window-346140117
+WINDOW_ICON = pygame.image.load("assets/icon/main_icon.png")
 
 image_dict = {
     0: EMPTY,
@@ -34,6 +36,8 @@ def start_drawing_mode(size: int, path: str):
     screen_w = w * SCALE + TILE_OFFSET * (w + 1)
     screen_h = h * SCALE + TILE_OFFSET * (h + 1)
     screen = pygame.display.set_mode((screen_w, screen_h))
+    pygame.display.set_caption('Optimal Carpets - Canvas')
+    pygame.display.set_icon(WINDOW_ICON)
     for i in range(h):
         for j in range(w):
             grid[i][j] = int(grid[i][j])
