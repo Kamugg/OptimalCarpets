@@ -22,6 +22,7 @@ image_dict = {
     4: WOOL
 }
 
+
 def start_drawing_mode(size: int, path: str):
     if not path:
         grid = [[0 for _ in range(size)] for _ in range(size)]
@@ -62,7 +63,7 @@ def start_drawing_mode(size: int, path: str):
                             grid[y][x] = selected_block
                         circle_center = (-1, -1)
                 elif mode == 'fill':
-                    fill(grid, (mx, my))
+                    fill(grid, (mx, my), selected_block)
             if event.type == pygame.MOUSEBUTTONUP:
                 if mode == 'free':
                     if event.button == 1:
@@ -133,27 +134,28 @@ def draw_circle(grid: list, center: tuple[int, int], radius: int) -> set:
     while angle < 360:
         x = round(center[0] + radius * math.cos(angle))
         x = max(0, x)
-        x = min(x, len(grid)-1)
+        x = min(x, len(grid) - 1)
         y = round(center[1] + radius * math.sin(angle))
         y = max(0, y)
-        y = min(y, len(grid)-1)
+        y = min(y, len(grid) - 1)
         c_coor.add((x, y))
         angle += 0.01
     return c_coor
 
-def fill(grid: list, start: tuple[int, int]):
-    if not(0 <= start[0] <= len(grid)-1) or not(0 <= start[1] <= len(grid)-1):
-        return
-    if grid[start[0]][start[1]] != 0:
-        return
-    if random.random() < 1:
-        grid[start[0]][start[1]] = 1
-    else:
-        grid[start[0]][start[1]] = 2
-    fill(grid, (start[0]+1, start[1]))
-    fill(grid, (start[0]-1, start[1]))
-    fill(grid, (start[0], start[1]+1))
-    fill(grid, (start[0], start[1]-1))
+
+def fill(grid: list, start: tuple[int, int], selected_block: int):
+    
+    to_fill = {start}
+    w, h = len(grid[0]), len(grid)
+    while to_fill:
+        nex = to_fill.pop()
+        if grid[nex[1]][nex[0]] != 0:
+            continue
+        grid[nex[1]][nex[0]] = selected_block
+        neighbors = [(nex[0] - 1, nex[1]), (nex[0] + 1, nex[1]), (nex[0], nex[1] - 1), (nex[0], nex[1] + 1)]
+        neighbors = [n for n in neighbors if (0 <= n[0] < w) and (0 <= n[1] < h)]
+        to_fill.update(neighbors)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
