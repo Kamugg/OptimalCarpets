@@ -7,18 +7,19 @@ import argparse
 
 TILE_OFFSET = 1
 SCALE = 20
+EMPTY = pygame.Surface((SCALE, SCALE))
+EMPTY.fill((0, 0, 0))
 COBBLE = pygame.transform.scale(pygame.image.load("./assets/cobble.jpg"), (SCALE, SCALE))
-MOSSY = pygame.transform.scale(pygame.image.load("./assets/mossy.jpg"), (SCALE, SCALE))
 WOOL = pygame.transform.scale(pygame.image.load("./assets/wool.jpg"), (SCALE, SCALE))
 BRICK = pygame.transform.scale(pygame.image.load("./assets/bricks.jpg"), (SCALE, SCALE))
 TRAP = pygame.transform.scale(pygame.image.load("./assets/trap.jpg"), (SCALE, SCALE))
 
 image_dict = {
+    0: EMPTY,
     1: COBBLE,
-    2: MOSSY,
-    3: BRICK,
-    4: TRAP,
-    5: WOOL
+    2: BRICK,
+    3: TRAP,
+    4: WOOL
 }
 
 def start_drawing_mode(size: int, path: str):
@@ -41,6 +42,7 @@ def start_drawing_mode(size: int, path: str):
     circle_center = (-1, -1)
     selected_block = 1
     drawing = True
+    clock = pygame.time.Clock()
     while drawing:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -49,8 +51,6 @@ def start_drawing_mode(size: int, path: str):
                 if mode == 'free':
                     if event.button == 1:
                         draw_press = True
-                    elif event.button == 3:
-                        delete_press = True
                 elif mode == 'circle':
                     if circle_center == (-1, -1):
                         circle_center = (mx, my)
@@ -67,8 +67,6 @@ def start_drawing_mode(size: int, path: str):
                 if mode == 'free':
                     if event.button == 1:
                         draw_press = False
-                    elif event.button == 3:
-                        delete_press = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_c:
                     mode = 'circle' if mode != 'circle' else 'free'
@@ -78,6 +76,8 @@ def start_drawing_mode(size: int, path: str):
                     with open('pattern.json', 'w') as f:
                         json.dump(grid, f)
                         drawing = False
+                if event.key == pygame.K_0:
+                    selected_block = 0
                 if event.key == pygame.K_1:
                     selected_block = 1
                 if event.key == pygame.K_2:
@@ -86,7 +86,8 @@ def start_drawing_mode(size: int, path: str):
                     selected_block = 3
                 if event.key == pygame.K_4:
                     selected_block = 4
-        screen.fill((155, 161, 157))
+        clock.tick(60)
+        screen.fill((180, 180, 180))
         mx, my = pygame.mouse.get_pos()
         mx, my = clip_mouse((mx, my), size)
         if draw_press:
@@ -100,12 +101,7 @@ def start_drawing_mode(size: int, path: str):
         for i in range(size):
             for j in range(size):
                 current_rect = get_rect_from_coor((j, i))
-                if grid[i][j] == 0:
-                    pygame.draw.rect(screen,
-                                     (0, 0, 0),
-                                     get_rect_from_coor((j, i)))
-                elif grid[i][j] != 0:
-                    screen.blit(image_dict[grid[i][j]], current_rect.topleft)
+                screen.blit(image_dict[grid[i][j]], current_rect.topleft)
 
         mouse_rect = get_rect_from_coor((mx, my))
         mouse_surface.fill((255, 255, 255))
