@@ -40,8 +40,9 @@ def start_drawing_mode(size: int, path: str):
     mouse_surface.set_alpha(128)
     draw_press, delete_press = False, False
     mode = 'free'
-    circle_center = (-1, -1)
+    circle_size = 6
     rect_topleft = (-1, -1)
+    circle_center = (-1, -1)
     selected_block = 1
     drawing = True
     clock = pygame.time.Clock()
@@ -51,20 +52,13 @@ def start_drawing_mode(size: int, path: str):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 drawing = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if mode == 'free':
-                    if event.button == 1:
-                        draw_press = True
+                    draw_press = True
                 elif mode == 'circle':
-                    if circle_center == (-1, -1):
-                        circle_center = (mx, my)
-                    else:
-                        csize = (mx - circle_center[0], my - circle_center[1])
-                        csize = round(math.sqrt(csize[0] ** 2 + csize[1] ** 2))
-                        coords = draw_circle(circle_center, csize)
-                        for x, y in coords:
-                            grid[y][x] = selected_block
-                        circle_center = (-1, -1)
+                    coords = draw_circle(circle_center, circle_size)
+                    for x, y in coords:
+                        grid[y][x] = selected_block
                 elif mode == 'fill':
                     fill(grid, (mx, my), selected_block)
                 elif mode == 'rect':
@@ -100,6 +94,11 @@ def start_drawing_mode(size: int, path: str):
                     selected_block = 3
                 if event.key == pygame.K_4:
                     selected_block = 4
+            if event.type == pygame.MOUSEWHEEL:
+                if mode == 'circle':
+                    circle_size += event.y
+                    if circle_size < 2:
+                        circle_size = 2
         clock.tick(60)
         screen.fill((180, 180, 180))
 
@@ -115,6 +114,14 @@ def start_drawing_mode(size: int, path: str):
             for j in range(size):
                 current_rect = get_rect_from_coor((j, i))
                 screen.blit(image_dict[grid[i][j]], current_rect.topleft)
+
+        if mode == 'rect' and rect_topleft != (-1, -1):
+            for j, i in draw_rect(rect_topleft, (mx, my)):
+                screen.blit(image_dict[selected_block], get_rect_from_coor((j, i)))
+        if mode == 'circle':
+            circle_center = (mx, my)
+            for j, i in draw_circle(circle_center, circle_size):
+                screen.blit(image_dict[selected_block], get_rect_from_coor((j, i)))
 
         mouse_rect = get_rect_from_coor((mx, my))
         mouse_surface.fill((255, 255, 255))

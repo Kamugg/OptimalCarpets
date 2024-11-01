@@ -14,11 +14,11 @@ def solve():
         for j in range(len(grid[0])):
             grid[i][j] = int(grid[i][j])
             block = grid[i][j]
-            if block in [1, 2]:
+            if block == 1:
                 var_grid[i][j] = 1
-            elif block == [0, 4]:
+            elif block == [0, 3]:
                 var_grid[i][j] = 0
-            elif block == 3:
+            elif block == 2:
                 var_grid[i][j] = -1
 
     for l in var_grid:
@@ -50,7 +50,7 @@ def solve():
         for j in range(sizew):
             if grid[i][j] == 1:
                 if model.eval(variab[i][j], model_completion=True).as_long() == -1:
-                    grid[i][j] = 5
+                    grid[i][j] = 4
     for l in grid:
         print(l)
     with open('solution.json', 'w') as f:
