@@ -56,9 +56,9 @@ def start_drawing_mode(size: int, path: str):
                     if circle_center == (-1, -1):
                         circle_center = (mx, my)
                     else:
-                        radius = (mx - circle_center[0], my - circle_center[1])
-                        radius = round(math.sqrt(radius[0] ** 2 + radius[1] ** 2))
-                        coords = draw_circle(grid, circle_center, radius)
+                        csize = (mx - circle_center[0], my - circle_center[1])
+                        csize = round(math.sqrt(csize[0] ** 2 + csize[1] ** 2))
+                        coords = draw_circle(circle_center, csize)
                         for x, y in coords:
                             grid[y][x] = selected_block
                         circle_center = (-1, -1)
@@ -127,24 +127,42 @@ def clip_mouse(coor: tuple[int, int], grid_size: int) -> tuple[int, int]:
     return x, y
 
 
-def draw_circle(grid: list, center: tuple[int, int], radius: int) -> set:
-    # TODO: grid is unnecessary
-    c_coor = set({})
-    angle = 0.
-    while angle < 360:
-        x = round(center[0] + radius * math.cos(angle))
-        x = max(0, x)
-        x = min(x, len(grid) - 1)
-        y = round(center[1] + radius * math.sin(angle))
-        y = max(0, y)
-        y = min(y, len(grid) - 1)
-        c_coor.add((x, y))
-        angle += 0.01
-    return c_coor
+def draw_circle(center: tuple[int, int], size: int) -> list[tuple[int, int]]:
+    points = []
+    if size % 2 == 1:
+        cx, cy = center[0] + .5, center[1] + .5
+        offset = 0
+        r = size // 2
+    else:
+        cx, cy = center[0] + 1.5, center[1] + 0.5
+        offset = -1
+        r = size // 2 - 1
+    x = r
+    y = 0
+    p = 1 - r
+    while x >= y:
+        points.append((cx + x, cy + y))
+        points.append((cx - x + offset, cy + y))
+        points.append((cx + x, cy - y + offset))
+        points.append((cx - x + offset, cy - y + offset))
+        points.append((cx + y, cy + x))
+        points.append((cx - y + offset, cy + x))
+        points.append((cx + y, cy - x + offset))
+        points.append((cx - y + offset, cy - x + offset))
+
+        y += 1
+
+        if p <= 0:
+            p = p + 2 * y + 1
+        else:
+            x -= 1
+            p = p + 2 * y - 2 * x + 1
+    return [(int(p[0]), int(p[1])) for p in points]
+
 
 
 def fill(grid: list, start: tuple[int, int], selected_block: int):
-    
+
     to_fill = {start}
     w, h = len(grid[0]), len(grid)
     while to_fill:
