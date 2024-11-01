@@ -26,15 +26,16 @@ image_dict = {
 def start_drawing_mode(size: int, path: str):
     if not path:
         grid = [[0 for _ in range(size)] for _ in range(size)]
+        w, h = (size, size)
     else:
         with open(path, "r") as f:
             grid = json.load(f)
-            # TODO PLEASE FIX
-            size = len(grid)
-    screen_size = size * SCALE + TILE_OFFSET * (size + 1)
-    screen = pygame.display.set_mode((screen_size, screen_size))
-    for i in range(size):
-        for j in range(size):
+        w, h = (len(grid[0]), len(grid))
+    screen_w = w * SCALE + TILE_OFFSET * (w + 1)
+    screen_h = h * SCALE + TILE_OFFSET * (h + 1)
+    screen = pygame.display.set_mode((screen_w, screen_h))
+    for i in range(h):
+        for j in range(w):
             grid[i][j] = int(grid[i][j])
     mouse_surface = pygame.Surface((SCALE, SCALE), pygame.SRCALPHA)
     mouse_surface.set_alpha(128)
@@ -48,7 +49,7 @@ def start_drawing_mode(size: int, path: str):
     clock = pygame.time.Clock()
     while drawing:
         mx, my = pygame.mouse.get_pos()
-        mx, my = clip_mouse((mx, my), size)
+        mx, my = clip_coor((mx, my), (w, h), mouse=True)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 drawing = False
@@ -61,6 +62,7 @@ def start_drawing_mode(size: int, path: str):
                         grid[y][x] = selected_block
                 elif mode == 'fill':
                     fill(grid, (mx, my), selected_block)
+                    mode = 'free'
                 elif mode == 'rect':
                     if rect_topleft == (-1, -1):
                         rect_topleft = (mx, my)
@@ -106,21 +108,19 @@ def start_drawing_mode(size: int, path: str):
             if mode == 'free':
                 grid[my][mx] = selected_block
 
-        elif delete_press:
-            if mode == 'free':
-                grid[my][mx] = 0
-
-        for i in range(size):
-            for j in range(size):
+        for i in range(h):
+            for j in range(w):
                 current_rect = get_rect_from_coor((j, i))
                 screen.blit(image_dict[grid[i][j]], current_rect.topleft)
 
         if mode == 'rect' and rect_topleft != (-1, -1):
             for j, i in draw_rect(rect_topleft, (mx, my)):
+                j, i = clip_coor((j, i), (w, h))
                 screen.blit(image_dict[selected_block], get_rect_from_coor((j, i)))
         if mode == 'circle':
             circle_center = (mx, my)
             for j, i in draw_circle(circle_center, circle_size):
+                j, i = clip_coor((j, i), (w, h))
                 screen.blit(image_dict[selected_block], get_rect_from_coor((j, i)))
 
         mouse_rect = get_rect_from_coor((mx, my))
@@ -135,14 +135,15 @@ def get_rect_from_coor(coor: tuple[int, int]) -> pygame.rect.Rect:
         (TILE_OFFSET * (coor[0] + 1) + SCALE * coor[0], TILE_OFFSET * (coor[1] + 1) + SCALE * coor[1], SCALE, SCALE))
 
 
-def clip_mouse(coor: tuple[int, int], grid_size: int) -> tuple[int, int]:
+def clip_coor(coor: tuple[int, int], grid_size: tuple[int, int], mouse: bool = False) -> tuple[int, int]:
     x, y = coor
-    x = int(x / (SCALE + TILE_OFFSET))
-    y = int(y / (SCALE + TILE_OFFSET))
+    if mouse:
+        x = int(x / (SCALE + TILE_OFFSET))
+        y = int(y / (SCALE + TILE_OFFSET))
     x = max(0, x)
-    x = min(x, grid_size - 1)
+    x = min(x, grid_size[0] - 1)
     y = max(0, y)
-    y = min(y, grid_size - 1)
+    y = min(y, grid_size[1] - 1)
     return x, y
 
 
