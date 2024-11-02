@@ -1,8 +1,8 @@
 import json
-import math
-import random
+
 import pygame
 import argparse
+import easygui
 
 TILE_OFFSET = 1
 SCALE = 20
@@ -87,9 +87,14 @@ def start_drawing_mode(size: int, path: str):
                 if event.key == pygame.K_r:
                     mode = 'rect' if mode != 'rect' else 'free'
                 if event.key == pygame.K_s:
-                    with open('pattern.json', 'w') as f:
+                    save_path = easygui.filesavebox(default="pattern.json", filetypes=["*.png"])
+                    with open(save_path, 'w') as f:
                         json.dump(grid, f)
-                        drawing = False
+                    drawing = False
+                if event.key == pygame.K_p:
+                    save_path = easygui.filesavebox(default="blueprint.png", filetypes=["*.png"])
+                    pygame.image.save(screen, save_path)
+                    drawing = False
                 if event.key == pygame.K_0:
                     selected_block = 0
                 if event.key == pygame.K_1:
