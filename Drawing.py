@@ -24,6 +24,13 @@ image_dict = {
     4: WOOL
 }
 
+keyboard_mapping = {
+    pygame.K_0: 0,
+    pygame.K_1: 1,
+    pygame.K_2: 2,
+    pygame.K_3: 3,
+    pygame.K_4: 4
+}
 
 def start_drawing_mode(size: int, path: str):
     if not path:
@@ -63,6 +70,7 @@ def start_drawing_mode(size: int, path: str):
                 elif mode == 'circle':
                     coords = draw_circle(circle_center, circle_size)
                     for x, y in coords:
+                        x, y = clip_coor((x, y), (w, h))
                         grid[y][x] = selected_block
                 elif mode == 'fill':
                     fill(grid, (mx, my), selected_block)
@@ -95,16 +103,8 @@ def start_drawing_mode(size: int, path: str):
                     save_path = easygui.filesavebox(default="blueprint.png", filetypes=["*.png"])
                     pygame.image.save(screen, save_path)
                     drawing = False
-                if event.key == pygame.K_0:
-                    selected_block = 0
-                if event.key == pygame.K_1:
-                    selected_block = 1
-                if event.key == pygame.K_2:
-                    selected_block = 2
-                if event.key == pygame.K_3:
-                    selected_block = 3
-                if event.key == pygame.K_4:
-                    selected_block = 4
+                if event.key in keyboard_mapping.keys():
+                    selected_block = keyboard_mapping.get(event.key)
             if event.type == pygame.MOUSEWHEEL:
                 if mode == 'circle':
                     circle_size += event.y

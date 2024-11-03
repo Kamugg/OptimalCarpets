@@ -1,56 +1,59 @@
 import json
+import time
 
 import z3
-from z3 import Optimize, Int, IntVector, And, Sum, Or, If
+from z3 import Optimize, Int, IntVector, And, Sum, Or, If, BoolVector, Not, is_true, Goal, Then, Tactic
 
 
 def solve():
-    with open('pattern.json', 'r') as f:
+    with open('dubious.json', 'r') as f:
         grid = json.load(f)
 
     grid = trim(grid)
-    var_grid = [[0 for _ in range(len(grid[0]))] for _ in range(len(grid))]
-    for i in range(len(grid)):
-        for j in range(len(grid[0])):
-            grid[i][j] = int(grid[i][j])
-            block = grid[i][j]
-            if block == 1:
-                var_grid[i][j] = 1
-            elif block == [0, 3]:
-                var_grid[i][j] = 0
-            elif block == 2:
-                var_grid[i][j] = -1
-
-    for l in var_grid:
-        print(l)
-
-    sizeh, sizew = len(var_grid), len(var_grid[0])
+    sizeh, sizew = len(grid), len(grid[0])
     solver = Optimize()
-    variab = [IntVector(f'row_{i}', sizew) for i in range(sizeh)]
+    goal = Goal()
+    variab = [BoolVector(f'row_{i}', sizew) for i in range(sizeh)]
     for i in range(sizeh):
         for j in range(sizew):
-            if var_grid[i][j] in [0, -1]:
-                solver.add(variab[i][j] == var_grid[i][j])
-            else:
-                solver.add(Or(variab[i][j] == -1, variab[i][j] == 1))
-    for i in range(1, sizeh-1):
-        for j in range(1, sizew-1):
-            if var_grid[i][j] == 1:
-                to_sum = []
+            if grid[i][j] in [0, 3]:
+                goal.add(variab[i][j])
+            elif grid[i][j] == 2:
+                goal.add(Not(variab[i][j]))
+            elif grid[i][j] == 1:
+                neighbors = []
                 for ii in range(i-1, i+2):
                     for jj in range(j-1, j+2):
-                        to_sum.append(variab[ii][jj])
-                solver.add(Or([v == -1 for v in to_sum]))
+                        # Clip to avoid out of bounds
+                        ii = min(ii, sizeh-1)
+                        ii = max(0, ii)
+                        jj = min(jj, sizew-1)
+                        jj = max(0, jj)
+                        neighbors.append((ii, jj))
+                if 3 in [grid[ii][jj] for ii, jj in neighbors]:
+                    goal.add(variab[i][j])
+                goal.add(Not(And([variab[ii][jj] for ii, jj in neighbors])))
+
+    tactic = Then(Tactic('simplify'), Tactic('propagate-values'))
+    simplified_goal = tactic(goal)
+
+    for subgoal in simplified_goal:
+        solver.add(subgoal.as_expr())
 
     total_sum = [cell for row in variab for cell in row]
-    solver.minimize(Sum([If(c == -1, 1, 0) for c in total_sum]))
-    print(solver.check())
+    solver.minimize(Sum([If(c, 0, 1) for c in total_sum]))
+    start_time = time.time()
+    res = solver.check()
+    end_time = time.time()
+    print(f"Instance solved in {end_time - start_time:.4f} seconds") # 30.4908
     model = solver.model()
+    print(model)
+    print([is_true(model[b]) for i in range(sizeh) for b in variab[i]])
     for i in range(sizeh):
-        for j in range(sizew):
-            if grid[i][j] == 1:
-                if model.eval(variab[i][j], model_completion=True).as_long() == -1:
-                    grid[i][j] = 4
+        for j, v in enumerate(variab[i]):
+            val = is_true(model[v])
+            if grid[i][j] == 1 and not val:
+                grid[i][j] = 4
     for l in grid:
         print(l)
     with open('solution.json', 'w') as f:
