@@ -83,24 +83,27 @@ def trim(grid: list) -> list:
         if sum(grid[i]) == 0:
             y_b += 1
         else:
+            y_b -= 1
             break
     for i in range(len(grid) - 1, -1, -1):
         if sum(grid[i]) == 0:
             y_p -= 1
         else:
+            y_p += 1
             break
     for j in range(len(grid)):
         col = [a[j] for a in grid]
         if sum(col) == 0:
             x_l += 1
         else:
+            x_l -= 1
             break
-
     for j in range(len(grid) - 1, -1, -1):
         col = [a[j] for a in grid]
         if sum(col) == 0:
             x_r -= 1
         else:
+            x_r += 1
             break
 
     grid = [[grid[i][j] for j in range(x_l, x_r + 1)] for i in range(y_b, y_p + 1)]
