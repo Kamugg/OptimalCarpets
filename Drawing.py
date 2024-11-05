@@ -5,7 +5,7 @@ import pygame
 import argparse
 import easygui
 
-TILE_OFFSET = 1
+TILE_OFFSET = 2
 SCALE = 20
 EMPTY = pygame.Surface((SCALE, SCALE))
 EMPTY.fill((0, 0, 0))
