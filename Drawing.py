@@ -1,4 +1,5 @@
 import json
+import math
 
 import pygame
 import argparse
@@ -32,6 +33,7 @@ keyboard_mapping = {
     pygame.K_4: 4
 }
 
+
 def start_drawing_mode(size: int, path: str):
     if not path:
         grid = [[0 for _ in range(size)] for _ in range(size)]
@@ -52,7 +54,7 @@ def start_drawing_mode(size: int, path: str):
     mouse_surface.set_alpha(128)
     draw_press, delete_press = False, False
     mode = 'free'
-    circle_size = 6
+    circle_radius = 6
     rect_topleft = (-1, -1)
     circle_center = (-1, -1)
     selected_block = 1
@@ -68,7 +70,7 @@ def start_drawing_mode(size: int, path: str):
                 if mode == 'free':
                     draw_press = True
                 elif mode == 'circle':
-                    coords = draw_circle(circle_center, circle_size)
+                    coords = draw_circle(circle_center, circle_radius)
                     for x, y in coords:
                         x, y = clip_coor((x, y), (w, h))
                         grid[y][x] = selected_block
@@ -107,9 +109,9 @@ def start_drawing_mode(size: int, path: str):
                     selected_block = keyboard_mapping.get(event.key)
             if event.type == pygame.MOUSEWHEEL:
                 if mode == 'circle':
-                    circle_size += event.y
-                    if circle_size < 2:
-                        circle_size = 2
+                    circle_radius += event.y
+                    if circle_radius < 2:
+                        circle_radius = 2
         clock.tick(60)
         screen.fill((180, 180, 180))
 
@@ -128,7 +130,7 @@ def start_drawing_mode(size: int, path: str):
                 screen.blit(image_dict[selected_block], get_rect_from_coor((j, i)))
         if mode == 'circle':
             circle_center = (mx, my)
-            for j, i in draw_circle(circle_center, circle_size):
+            for j, i in draw_circle(circle_center, circle_radius):
                 j, i = clip_coor((j, i), (w, h))
                 screen.blit(image_dict[selected_block], get_rect_from_coor((j, i)))
 
@@ -173,36 +175,24 @@ def draw_rect(topleft: tuple[int, int], btmright: tuple[int, int]) -> list[tuple
     return rect_coor
 
 
-def draw_circle(center: tuple[int, int], size: int) -> list[tuple[int, int]]:
+def draw_circle(center: tuple[int, int], radius: int) -> list[tuple[int, int]]:
+    cx, cy = center[0] + 0.5, center[1] + 0.5
     points = []
-    if size % 2 == 1:
-        cx, cy = center[0] + .5, center[1] + .5
-        offset = 0
-        r = size // 2
-    else:
-        cx, cy = center[0] + 1.5, center[1] + 0.5
-        offset = -1
-        r = size // 2 - 1
-    x = r
+    x = radius
     y = 0
-    p = 1 - r
     while x >= y:
         points.append((cx + x, cy + y))
-        points.append((cx - x + offset, cy + y))
-        points.append((cx + x, cy - y + offset))
-        points.append((cx - x + offset, cy - y + offset))
         points.append((cx + y, cy + x))
-        points.append((cx - y + offset, cy + x))
-        points.append((cx + y, cy - x + offset))
-        points.append((cx - y + offset, cy - x + offset))
-
+        points.append((cx - y, cy + x))
+        points.append((cx - x, cy + y))
+        points.append((cx - x, cy - y))
+        points.append((cx - y, cy - x))
+        points.append((cx + x, cy - y))
+        points.append((cx + y, cy - x))
+        if x ** 2 + (y + 1) ** 2 - radius ** 2 >= 0:
+            x -= 1
         y += 1
 
-        if p <= 0:
-            p = p + 2 * y + 1
-        else:
-            x -= 1
-            p = p + 2 * y - 2 * x + 1
     return [(int(p[0]), int(p[1])) for p in points]
 
 
