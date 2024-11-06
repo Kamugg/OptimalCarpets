@@ -7,6 +7,7 @@ import easygui
 
 TILE_OFFSET = 2
 SCALE = 20
+TARGET_SCREEN_SIZE = 600
 EMPTY = pygame.Surface((SCALE, SCALE))
 EMPTY.fill((0, 0, 0))
 COBBLE = pygame.transform.scale(pygame.image.load("assets/tiles/cobble.jpg"), (SCALE, SCALE))
@@ -35,6 +36,16 @@ keyboard_mapping = {
 
 
 def start_drawing_mode(size: int, path: str):
+    """
+    Main loop for the drawing script
+
+    Args:
+        size (int): Size of the square canvas.
+        path (int): Path of the file to open, if specified. If none an empty size x size canvas will be created.
+
+    Returns:
+        None
+    """
     if not path:
         grid = [[0 for _ in range(size)] for _ in range(size)]
         w, h = (size, size)
@@ -42,6 +53,7 @@ def start_drawing_mode(size: int, path: str):
         with open(path, "r") as f:
             grid = json.load(f)
         w, h = (len(grid[0]), len(grid))
+
     screen_w = w * SCALE + TILE_OFFSET * (w + 1)
     screen_h = h * SCALE + TILE_OFFSET * (h + 1)
     screen = pygame.display.set_mode((screen_w, screen_h))
@@ -75,7 +87,9 @@ def start_drawing_mode(size: int, path: str):
                         x, y = clip_coor((x, y), (w, h))
                         grid[y][x] = selected_block
                 elif mode == 'fill':
-                    fill(grid, (mx, my), selected_block)
+                    to_fill = fill(grid, (mx, my), selected_block)
+                    for x, y in to_fill:
+                        grid[y][x] = selected_block
                     mode = 'free'
                 elif mode == 'rect':
                     if rect_topleft == (-1, -1):
@@ -142,11 +156,34 @@ def start_drawing_mode(size: int, path: str):
 
 
 def get_rect_from_coor(coor: tuple[int, int]) -> pygame.rect.Rect:
+    """
+    Returns the rectangle of the grid from the given coordinates. The input coordinates are therefore converted into ones
+    in the grid space, and a rectangle of dimension SCALE X SCALE is created.
+
+    Args:
+        coor (tuple[int, int]): Input coordinates to be converted.
+
+    Returns:
+        pygame.rect.Rect: Rectangle of the grid.
+    """
     return pygame.rect.Rect(
         (TILE_OFFSET * (coor[0] + 1) + SCALE * coor[0], TILE_OFFSET * (coor[1] + 1) + SCALE * coor[1], SCALE, SCALE))
 
 
 def clip_coor(coor: tuple[int, int], grid_size: tuple[int, int], mouse: bool = False) -> tuple[int, int]:
+    """
+    Clips the input coordinates inside the grid if necessary. If mouse is False, the function expects coordinates belonging
+    to the grid, and are clipped between 0 and the grid width/height. Otherwise, the function expects coordinates from the
+    window point of view and are preventively converted into grid space coordinates.
+
+    Args:
+        coor (tuple[int, int]): coordinates to clip
+        grid_size (tuple[int, int]): (width, height) of the grid
+        mouse (bool, optional): If these coordinates come from the grid space or are raw mouse coordinates. Defaults to False.
+
+    Returns:
+        tuple[int, int]: clipped coordinates (x, y)
+    """
     x, y = coor
     if mouse:
         x = int(x / (SCALE + TILE_OFFSET))
@@ -159,6 +196,17 @@ def clip_coor(coor: tuple[int, int], grid_size: tuple[int, int], mouse: bool = F
 
 
 def draw_rect(topleft: tuple[int, int], btmright: tuple[int, int]) -> list[tuple[int, int]]:
+    """
+    Computes the perimeter of a rectangle given its top left corner and its bottm right corner.
+
+    Args:
+        topleft (int): Topleft corner coordinates
+        btmright (int): Bottom right corner coordinates
+
+    Returns:
+        list[tuple[int, int]]: Returns the list of the coordinates of the points belonging to the perimeter of the specified
+        rectangle in the form [(x0, y0), (x1, y1), ...]
+    """
     if topleft[0] <= btmright[0]:
         xrange = range(topleft[0], btmright[0] + 1)
     else:
@@ -176,6 +224,25 @@ def draw_rect(topleft: tuple[int, int], btmright: tuple[int, int]) -> list[tuple
 
 
 def draw_circle(center: tuple[int, int], radius: int) -> list[tuple[int, int]]:
+    """
+    Computes the perimeter of a circle given its center and radius. The function starts from the point (r, 0) and iteratively
+    moves to the next point following this process:
+    - if x^2 + (y+1)^2 <= radius then (x, y+1) is the next point and y gets updated accordingly.
+    - otherwise the next point of the circle is chosen to be (x-1, y+1)
+    The above process stops when x >= y i.e. when the first octave is built. The other 7 remaining octaves are constructed
+    by symmetry. From the first one
+
+    Args:
+        center (tuple[int, int]): Circle's center coordinate
+        radius (int): Radius of the circle
+
+    Returns:
+        list[tuple[int, int]]: Returns the list of the coordinates of the points belonging to the perimeter of the specified
+        circle in the form [(x0, y0), (x1, y1), ...]
+
+    Notes:
+        Due to how the algorithm works, this function can ONLY generate circles with an odd diameter.
+    """
     cx, cy = center[0] + 0.5, center[1] + 0.5
     points = []
     x = radius
@@ -196,17 +263,32 @@ def draw_circle(center: tuple[int, int], radius: int) -> list[tuple[int, int]]:
     return [(int(p[0]), int(p[1])) for p in points]
 
 
-def fill(grid: list, start: tuple[int, int], selected_block: int):
-    to_fill = {start}
+def fill(grid: list[list[int]], start: tuple[int, int], selected_block: int):
+    """
+    Fills a closed region with the selected block. A closed region is by definition a perimeter without holes made with
+    blocks equal to the selected block.
+
+    Args:
+        grid (list[list[int]]): The canvas grid
+        start (int): Starting point of the fill
+        selected_block (int): selected block for filling
+
+    Returns:
+        set[tuple[int, int]]: Returns the set of the coordinates of the points to fill in the form {(x0, y0), (x1, y1), ...}
+    """
+    unexplored = [start]
+    to_fill = set({})
     w, h = len(grid[0]), len(grid)
-    while to_fill:
-        nex = to_fill.pop()
-        if grid[nex[1]][nex[0]] != 0:
+    while unexplored:
+        nex = unexplored.pop()
+        if grid[nex[1]][nex[0]] == selected_block:
             continue
-        grid[nex[1]][nex[0]] = selected_block
+        to_fill.add(nex)
         neighbors = [(nex[0] - 1, nex[1]), (nex[0] + 1, nex[1]), (nex[0], nex[1] - 1), (nex[0], nex[1] + 1)]
-        neighbors = [n for n in neighbors if (0 <= n[0] < w) and (0 <= n[1] < h)]
-        to_fill.update(neighbors)
+        neighbors = [clip_coor(n, (w, h)) for n in neighbors]
+        neighbors = [n for n in neighbors if n not in to_fill]
+        unexplored += neighbors
+    return to_fill
 
 
 if __name__ == '__main__':
